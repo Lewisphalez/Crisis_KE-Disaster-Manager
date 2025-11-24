@@ -1,0 +1,9 @@
+{
+  "name": "CrisisSync",
+  "description": "A modern disaster management system enabling real-time reporting, incident tracking, and AI-powered resource coordination for safer communities.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ]
+}
