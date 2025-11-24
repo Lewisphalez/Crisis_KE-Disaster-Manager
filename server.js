@@ -116,7 +116,7 @@ app.get('/api/incidents', (req, res) => {
 // Create new incident
 app.post('/api/incidents', (req, res) => {
   const { id, title, description, type, status, severity, location, timestamp, reporterName, aiAnalysis, imageUrl, deployedResources } = req.body;
-  const sql = `INSERT INTO incidents (id, title, description, type, status, severity, latitude, longitude, timestamp, reporterName, aiAnalysis, imageUrl, JSON.stringify(deployedResources || [])) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`;
+  const sql = `INSERT INTO incidents (id, title, description, type, status, severity, latitude, longitude, timestamp, reporterName, aiAnalysis, imageUrl, deployedResources) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`;
   const params = [id, title, description, type, status, severity, location.latitude, location.longitude, timestamp, reporterName, aiAnalysis, imageUrl, JSON.stringify(deployedResources || [])];
   
   db.run(sql, params, function (err) {
