@@ -3,15 +3,122 @@ import sqlite3Import from 'sqlite3';
 import cors from 'cors';
 import bodyParser from 'body-parser';
 import path from 'path'; // Not strictly used in the routes, but was in original
+import swaggerUi from 'swagger-ui-express'; // Added Swagger UI import
+import swaggerJsdoc from 'swagger-jsdoc'; // Added Swagger JSDoc import
 
 const sqlite3 = sqlite3Import.verbose();
 
 const app = express();
 const PORT = 5000; // Assuming the user wants to keep 5000
 
+// Swagger definition
+const swaggerOptions = {
+  definition: {
+    openapi: '3.0.0',
+    info: {
+      title: 'CrisisSync API',
+      version: '1.0.0',
+      description: 'API for CrisisSync incident management',
+    },
+    servers: [
+      {
+        url: `http://localhost:${PORT}`, // Base URL for the API
+        description: 'Local Development Server',
+      },
+    ],
+    components: {
+      schemas: {
+        Incident: {
+          type: 'object',
+          required: ['id', 'title', 'description', 'type', 'status', 'severity', 'latitude', 'longitude', 'timestamp', 'reporterName'],
+          properties: {
+            id: {
+              type: 'string',
+              description: 'Unique identifier for the incident',
+              example: '123e4567-e89b-12d3-a456-426614174000',
+            },
+            title: {
+              type: 'string',
+              description: 'Brief title of the incident',
+              example: 'Flash Flood in Kibera',
+            },
+            description: {
+              type: 'string',
+              description: 'Detailed description of the incident',
+              example: 'Heavy rains caused river banks to overflow near the bridge. Several homes affected.',
+            },
+            type: {
+              type: 'string',
+              description: 'Type of disaster or incident',
+              example: 'Flood',
+            },
+            status: {
+              type: 'string',
+              description: 'Current status of the incident',
+              example: 'Investigating',
+            },
+            severity: {
+              type: 'string',
+              description: 'Severity level of the incident',
+              example: 'High',
+            },
+            latitude: {
+              type: 'number',
+              format: 'float',
+              description: 'Latitude of the incident location',
+              example: -1.3120,
+            },
+            longitude: {
+              type: 'number',
+              format: 'float',
+              description: 'Longitude of the incident location',
+              example: 36.7890,
+            },
+            timestamp: {
+              type: 'integer',
+              format: 'int64',
+              description: 'Timestamp when the incident was reported (milliseconds since epoch)',
+              example: 1678886400000,
+            },
+            reporterName: {
+              type: 'string',
+              description: 'Name of the person who reported the incident',
+              example: 'John Kamau',
+            },
+            aiAnalysis: {
+              type: 'string',
+              description: 'AI-generated analysis or insights (optional)',
+              example: 'High risk of waterborne diseases. Immediate evacuation.',
+            },
+            imageUrl: {
+              type: 'string',
+              description: 'URL of an image related to the incident (optional)',
+              example: 'https://images.unsplash.com/photo-1548625361-888469d6571d?auto=format&fit=crop&q=80&w=400',
+            },
+            deployedResources: {
+              type: 'array',
+              items: {
+                type: 'string',
+              },
+              description: 'List of resources deployed (optional)',
+              example: ['Red Cross Unit 4', 'Nairobi Fire Dept'],
+            },
+          },
+        },
+      },
+    },
+  },
+  apis: ['./server.js'], // Files containing annotations for the OpenAPI specification
+};
+
+const swaggerSpec = swaggerJsdoc(swaggerOptions);
+
 // Middleware
 app.use(cors()); // CORS middleware
 app.use(bodyParser.json({ limit: '10mb' })); // Increased limit for base64 images
+
+// Serve Swagger UI
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Database Setup
 const db = new sqlite3.Database('./database.sqlite', (err) => {
@@ -96,6 +203,34 @@ function seedData() {
 
 // --- Routes ---
 
+/**
+ * @swagger
+ * tags:
+ *   name: Incidents
+ *   description: Incident management
+ */
+
+/**
+ * @swagger
+ * /api/incidents:
+ *   get:
+ *     summary: Retrieve a list of incidents
+ *     tags: [Incidents]
+ *     responses:
+ *       200:
+ *         description: A list of incidents.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Incident'
+ *       400:
+ *         description: Error retrieving incidents.
+ */
 // Get all incidents
 app.get('/api/incidents', (req, res) => {
   db.all("SELECT * FROM incidents ORDER BY timestamp DESC", [], (err, rows) => {
@@ -113,6 +248,35 @@ app.get('/api/incidents', (req, res) => {
   });
 });
 
+/**
+ * @swagger
+ * /api/incidents:
+ *   post:
+ *     summary: Create a new incident
+ *     tags: [Incidents]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Incident'
+ *     responses:
+ *       200:
+ *         description: Incident created successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   $ref: '#/components/schemas/Incident'
+ *                 id:
+ *                   type: string
+ *       400:
+ *         description: Invalid input or error creating incident.
+ */
 // Create new incident
 app.post('/api/incidents', (req, res) => {
   const { id, title, description, type, status, severity, location, timestamp, reporterName, aiAnalysis, imageUrl, deployedResources } = req.body;
@@ -132,6 +296,54 @@ app.post('/api/incidents', (req, res) => {
   });
 });
 
+/**
+ * @swagger
+ * /api/incidents/{id}:
+ *   put:
+ *     summary: Update an existing incident
+ *     tags: [Incidents]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: The incident ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               status:
+ *                 type: string
+ *                 description: New status of the incident
+ *               deployedResources:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: List of deployed resources
+ *             example:
+ *               status: "Resolved"
+ *               deployedResources: ["Red Cross Unit 4", "Police Dept"]
+ *     responses:
+ *       200:
+ *         description: Incident updated successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 changes:
+ *                   type: integer
+ *       400:
+ *         description: Invalid input or error updating incident.
+ *       404:
+ *         description: Incident not found.
+ */
 // Update incident
 app.put('/api/incidents/:id', (req, res) => {
   const { status, deployedResources } = req.body;
